@@ -6,6 +6,9 @@ dependency[jasmine.o]
 #ifndef JASMINE_H
 #define JASMINE_H
 
+#include <cstdint>
+#include <cstddef>
+
 /**The Jasmine class. Waveform data is stored in channel-major order. That is
  * for stereo data, the layout is LLLL... and then RRRR...
 */
@@ -20,32 +23,35 @@ class Jasmine
 
 		/**Called wehn constructor fails. The default function prints the message
 		 * and calls abort(3), but it can also throw the message object as an
-		 * exception or package it into another object and throw that.
+		 * exception or package it into another object and throw that. However,
+		 * it must not return.
 		*/
-		typedef void (*ErrorHandler)(const ErrorMessage& message);
+		typedef void (*ErrorHandler [[noreturn]])(const ErrorMessage& message);
 
-		Jasmine(const char* client_name,const char* const* ports_in
+		Jasmine(const char* client_name
+			,const char* const* ports_in
 			,const char* const* ports_out)
 			{init(client_name,ports_in,ports_out,default_error_handler);}
 
 		Jasmine(const char* client_name,const char* const* ports_in
 			,const char* const* ports_out
-			,ErrorHandler_handler)
-			{init(client_name,ports_in,ports_out,exception_handler);}
+			,ErrorHandler on_error)
+			{init(client_name,ports_in,ports_out,on_error);}
 
 		~Jasmine();
 
-		void write(const float* data,size_t n_frames) noexcept;
-		void read(float* data,size_t n_frames) const noexcept;
+		size_t write(const float* data,size_t n_frames) noexcept;
+		size_t read(float* data,size_t n_frames) const noexcept;
 		float sampleRateGet() const noexcept;
-
-		static const char* errorStringGet() const noexcept;
 
 	private:
 		struct Impl;
 		Impl* m_impl;
 
-		void default_error_handler(const char* message);
+		static void default_error_handler(const ErrorMessage& message);
+		void init(const char* client_name
+			,const char* const* ports_in,const char* const* ports_out
+			,ErrorHandler handler);
 	};
 
 #endif

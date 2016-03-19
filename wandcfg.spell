@@ -1,4 +1,4 @@
-﻿config_set[
+config_set[
 	components[
 		Wand[
 			paths[
