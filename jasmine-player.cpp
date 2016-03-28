@@ -33,49 +33,36 @@ bool filenameGet(FILE* src,std::string& ret)
 	return 0;
 	}
 
-const char* ports[]={"Left",nullptr};
+const char* ports[]={"Left","Right",nullptr};
 
-void outputTranspose(const float* source,float* dest
-	,unsigned int N_ch_in,unsigned int N_ch_out,unsigned int n_frames)
+std::unique_ptr<SNDFILE,decltype(&sf_close)> sourceOpen(const char* filename
+	,SF_INFO& info)
 	{
-	unsigned int n_fetch=std::min(N_ch_in,N_ch_out);
-	for(unsigned int k=0;k<n_fetch;++k)
-		{
-		auto ptr_out=dest + k*n_frames;
-		auto N=n_frames;
-		auto ptr_in=source+k;
-		while(N!=0)
-			{
-			*ptr_out=*ptr_in;
-			++ptr_out;
-			ptr_in+=N_ch_in;
-			--N;
-			}
-		}
+	return {sf_open(filename, SFM_READ,&info),sf_close};
 	}
 
 int main()
 	{
-	Jasmine player("Jasmine",nullptr,ports,48000);
+	Jasmine player("Jasmine",nullptr,ports,0);
 	std::string filename;
 	while(filenameGet(stdin,filename))
 		{
 		SF_INFO info;
-		std::unique_ptr<SNDFILE,decltype(&sf_close)> source
-			{sf_open(filename.c_str(), SFM_READ,&info),sf_close};
+		auto source=sourceOpen(filename.c_str(),info);
+
+		if(source.get()==nullptr)
+			{continue;}
 
 		printf("Playing %s\n",filename.c_str());
-		auto N=48000;
-		auto N_ch_out=player.outputChannelsCount();
+ 		auto N=48000;
 		auto n=N;
 		std::vector<float> buffer(N*info.channels);
 		do
 			{
-			n=sf_read_float(source.get(),buffer.data(),N);
-			player.write(buffer.data(),n);
+			n=sf_readf_float(source.get(),buffer.data(),N);
+			player.playbackReadyWait();
+			player.writeByFrame(buffer.data(),n,info.channels,0);
 			}
 		while(n==N);
-		player.write(buffer.data(),0);
-		player.write(buffer.data(),0);
 		}
 	}

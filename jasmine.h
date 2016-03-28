@@ -9,8 +9,7 @@ dependency[jasmine.o]
 #include <cstdint>
 #include <cstddef>
 
-/**The Jasmine class. Waveform data is stored in channel-major order. That is
- * for stereo data, the layout is LLLL... and then RRRR...
+/**The Jasmine class.
 */
 class Jasmine
 	{
@@ -30,18 +29,28 @@ class Jasmine
 
 		Jasmine(const char* client_name
 			,const char* const* ports_in
-			,const char* const* ports_out)
-			{init(client_name,ports_in,ports_out,default_error_handler);}
+			,const char* const* ports_out
+			,unsigned int buffer_size)
+			{init(client_name,ports_in,ports_out,buffer_size,default_error_handler);}
 
 		Jasmine(const char* client_name,const char* const* ports_in
 			,const char* const* ports_out
+			,unsigned int buffer_size
 			,ErrorHandler on_error)
-			{init(client_name,ports_in,ports_out,on_error);}
+			{init(client_name,ports_in,ports_out,buffer_size,on_error);}
 
 		~Jasmine();
 
-		size_t write(const float* data,size_t n_frames) noexcept;
-		size_t read(float* data,size_t n_frames) const noexcept;
+		void playbackReadyWait() noexcept;
+
+		void writeByChannel(const float* data,unsigned int n_frames
+			,unsigned int n_channels_in,unsigned int channel_out_first);
+
+		void writeByFrame(const float* data,unsigned int n_frames
+			,unsigned int n_channels_in,unsigned int channel_out_first);
+
+		void read(float* data,unsigned int n_frames,unsigned int channel) const noexcept;
+
 		float sampleRateGet() const noexcept;
 
 	private:
@@ -51,6 +60,7 @@ class Jasmine
 		static void default_error_handler(const ErrorMessage& message);
 		void init(const char* client_name
 			,const char* const* ports_in,const char* const* ports_out
+			,unsigned int buffer_size
 			,ErrorHandler handler);
 	};
 
